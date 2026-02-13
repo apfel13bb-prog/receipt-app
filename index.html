@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>レシート家計簿</title>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+<style>
+body { font-family: sans-serif; padding: 20px; }
+button { padding: 10px; margin-top: 10px; }
+.item { display: flex; justify-content: space-between; margin: 5px 0; }
+</style>
+</head>
+<body>
+
+<h2>レシート家計簿</h2>
+
+<input type="file" accept="image/*" id="imageInput">
+<button onclick="processImage()">OCR実行</button>
+
+<h3>抽出結果</h3>
+<div id="result"></div>
+
+<h3>保存済み</h3>
+<div id="saved"></div>
+
+<script>
+
+function processImage() {
+    const file = document.getElementById('imageInput').files[0];
+    if (!file) return alert("画像を選択してください");
+
+    Tesseract.recognize(
+        file,
+        'jpn',
+        { logger: m => console.log(m) }
+    ).then(({ data: { text } }) => {
+        parseReceipt(text);
+    });
+}
+
+function parseReceipt(text) {
+    const lines = text.split("\n");
+    const resultDiv = document.getElementById("result");
+    resultDiv.innerHTML = "";
+
+    lines.forEach(line => {
+        const match = line.match(/(.+)\s+(\d{1,6})/);
+        if (match) {
+            const name = match[1];
+            const price = match[2];
+
+            const div = document.createElement("div");
+            div.className = "item";
+            div.innerHTML = `<span>${name}</span><span>¥${price}</span>`;
+            resultDiv.appendChild(div);
+
+            saveItem(name, price);
+        }
+    });
+
+    loadSaved();
+}
+
+function saveItem(name, price) {
+    const items = JSON.parse(localStorage.getItem("items") || "[]");
+    items.push({name, price});
+    localStorage.setItem("items", JSON.stringify(items));
+}
+
+function loadSaved() {
+    const savedDiv = document.getElementById("saved");
+    savedDiv.innerHTML = "";
+    const items = JSON.parse(localStorage.getItem("items") || "[]");
+
+    items.forEach(item => {
+        const div = document.createElement("div");
+        div.className = "item";
+        div.innerHTML = `<span>${item.name}</span><span>¥${item.price}</span>`;
+        savedDiv.appendChild(div);
+    });
+}
+
+loadSaved();
+
+</script>
+
+</body>
+</html>
