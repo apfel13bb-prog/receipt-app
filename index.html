@@ -31,9 +31,13 @@ function processImage() {
 
     Tesseract.recognize(
         file,
-        'jpn',
-        { logger: m => console.log(m) }
+        'jpn+eng',
+        {
+            logger: m => console.log(m),
+            tessedit_char_whitelist: '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ円¥.- '
+        }
     ).then(({ data: { text } }) => {
+        console.log(text);
         parseReceipt(text);
     });
 }
@@ -44,17 +48,19 @@ function parseReceipt(text) {
     resultDiv.innerHTML = "";
 
     lines.forEach(line => {
-        const match = line.match(/(.+)\s+(\d{1,6})/);
+        const match = line.match(/(.+?)\s*[¥円]?\s*(\d{2,6})/);
         if (match) {
-            const name = match[1];
-            const price = match[2];
+            const name = match[1].trim();
+            const price = parseInt(match[2]);
 
-            const div = document.createElement("div");
-            div.className = "item";
-            div.innerHTML = `<span>${name}</span><span>¥${price}</span>`;
-            resultDiv.appendChild(div);
+            if (price > 0) {
+                const div = document.createElement("div");
+                div.className = "item";
+                div.innerHTML = `<span>${name}</span><span>¥${price}</span>`;
+                resultDiv.appendChild(div);
 
-            saveItem(name, price);
+                saveItem(name, price);
+            }
         }
     });
 
